@@ -15,9 +15,7 @@
 
 include_directories(${PROJECT_SOURCE_DIR} ${EXTERNAL_INCLUDE})
 
-file(GLOB io-input-src-files
-    input_cpps
-    inputformat_helper.cpp
+set(input_cpps inputformat_helper.cpp
     line_inputformat.cpp
     chunk_inputformat.cpp
     separator_inputformat.cpp
@@ -26,28 +24,28 @@ file(GLOB io-input-src-files
     nfs_binary_inputformat.cpp
     binary_inputformat_impl.cpp
     binary_inputformat.cpp
-    inputformat_store.cpp)
+    elasticsearch_inputformat.cpp
+    elasticsearch_outputformat.cpp)
+
+add_subdirectory(elasticsearch_connector)
+set (input_cpps ${input_cpps} elasticsearch_connector/http.cpp)
 
 if(LIBHDFS3_FOUND)
-    file(GLOB io-input-hdfs-src-files hdfs_file_splitter.cpp hdfs_binary_inputformat.cpp)
-    list(APPEND io-input-src-files ${io-input-hdfs-src-files})
+    list(APPEND input_cpps hdfs_file_splitter.cpp hdfs_binary_inputformat.cpp)
 endif(LIBHDFS3_FOUND)
 
 if(MONGOCLIENT_FOUND)
-    file(GLOB io-input-mongo-src-files mongodb_split.cpp mongodb_inputformat.cpp)
-    list(APPEND io-input-src-files ${io-input-mongo-src-files})
+    list(APPEND input_cpps mongodb_split.cpp mongodb_inputformat.cpp)
 endif(MONGOCLIENT_FOUND)
 
 if(THRIFT_FOUND)
-    file(GLOB io-input-flume-src-files
-        flume_connector/flume_types.cpp
+    list(APPEND input_cpps flume_connector/flume_types.cpp
         flume_connector/flume_constants.cpp
         flume_connector/ThriftSourceProtocol.cpp
         flume_inputformat.cpp)
-    list(APPEND io-input-src-files ${io-input-flume-src-files})
 endif(THRIFT_FOUND)
 
-husky_cache_variable(io-input-src-files ${io-input-src-files})
+list(APPEND input_cpps inputformat_store.cpp)
 
-add_library(input-objs OBJECT ${io-input-src-files})
+add_library(input-objs OBJECT ${input_cpps})
 husky_default_properties(input-objs)

@@ -1,0 +1,66 @@
+// Copyright 2016 Husky Team
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+#include <set>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include "boost/tokenizer.hpp"
+#include "mongo/bson/bson.h"
+#include "mongo/client/dbclient.h"
+
+#include "base/serialization.hpp"
+#include "core/engine.hpp"
+#include "io/input/inputformat_store.hpp"
+#include "lib/aggregator_factory.hpp"
+#include "io/output/elasticsearch_outputformat.hpp"
+#include "boost/property_tree/ptree.hpp"
+#include "boost/property_tree/json_parser.hpp"
+
+void mongo_to_es() {
+
+    auto& infmt = husky::io::InputFormatStore::create_mongodb_inputformat();
+    infmt.set_server(husky::Context::get_param("mongo_server"));
+    infmt.set_ns(husky::Context::get_param("mongo_db"), husky::Context::get_param("mongo_collection"));
+    infmt.set_query("");
+    
+    husky::io::ElasticsearchOutputFormat outfmt;
+     
+    auto work = [&](std::string& chunk) {
+        mongo::BSONObj o = mongo::fromjson(chunk);
+        o = o.removeField("_id");
+        std::string id = o.getStringField("id"); 
+        if (chunk.size() == 0)
+            return;
+        outfmt.bulk_add("index","enwiki","wiki",id,o.jsonString());
+        if (outfmt.bulk_is_full(1024)) outfmt.bulk_flush();
+         
+    };
+
+    husky::load(infmt, work);
+    outfmt.bulk_flush(); 
+}
+
+int main(int argc, char** argv) {
+    std::vector<std::string> args;
+    args.push_back("mongo_server");
+    args.push_back("mongo_db");
+    args.push_back("mongo_collection");
+    if (husky::init_with_args(argc, argv, args)) {
+        husky::run_job(mongo_to_es);
+        return 0;
+    }
+    return 1;
+}
