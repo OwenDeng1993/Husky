@@ -18,10 +18,11 @@
  */
 
 #include "http.h"
-#include "boost/property_tree/ptree.hpp"
 #include "boost/property_tree/json_parser.hpp"
+#include "boost/property_tree/ptree.hpp"
 
 #include <arpa/inet.h>
+#include <fcntl.h>
 #include <fcntl.h>
 #include <netdb.h>
 #include <sys/types.h>
@@ -32,8 +33,6 @@
 #include <cstring>
 #include <iostream>
 #include <sstream>
-#include <fcntl.h>
-
 
 /** Returns true on success, or false if there was an error */
 bool SetSocketBlockingEnabled(int fd, bool blocking) {
@@ -233,8 +232,8 @@ bool HTTP::request(const char* method, const char* endUrl, const char* data, boo
 }
 
 // Get Json Object on web server.
-unsigned int HTTP::request(const char* method, const char* endUrl, const char* data, boost::property_tree::ptree* jOutput,
-                           Result& result, const char* content_type) {
+unsigned int HTTP::request(const char* method, const char* endUrl, const char* data,
+                           boost::property_tree::ptree* jOutput, Result& result, const char* content_type) {
     unsigned int statusCode = 0;
 
     std::string output;
@@ -253,7 +252,7 @@ unsigned int HTTP::request(const char* method, const char* endUrl, const char* d
             std::stringstream ss(output);
             boost::property_tree::ptree pt;
             read_json(ss, pt);
-            jOutput->push_back(std::make_pair("main",pt));
+            jOutput->push_back(std::make_pair("main", pt));
         }
     } catch (Exception& e) {
         printf("parser() failed in Getter. Exception caught: %s\n", e.what());

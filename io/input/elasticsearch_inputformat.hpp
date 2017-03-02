@@ -17,11 +17,10 @@
 #include <string>
 #include <vector>
 
+#include "boost/property_tree/json_parser.hpp"
+#include "boost/property_tree/ptree.hpp"
 #include "io/input/elasticsearch_connector/http.h"
 #include "io/input/inputformat_base.hpp"
-#include "boost/property_tree/ptree.hpp"
-#include "boost/property_tree/json_parser.hpp"
-
 
 namespace husky {
 namespace io {

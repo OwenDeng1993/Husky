@@ -17,11 +17,10 @@
 #include <string>
 #include <vector>
 
+#include "boost/property_tree/json_parser.hpp"
+#include "boost/property_tree/ptree.hpp"
 #include "io/input/elasticsearch_connector/http.h"
 #include "io/output/outputformat_base.hpp"
-#include "boost/property_tree/ptree.hpp"
-#include "boost/property_tree/json_parser.hpp"
-
 
 namespace husky {
 namespace io {
@@ -34,17 +33,19 @@ class ElasticsearchOutputFormat final : public OutputFormatBase {
     virtual bool is_setup() const;
     bool isActive();
 
-    bool set_index(const std::string& index, const std::string& type, const std::string& id, const boost::property_tree::ptree & content);
+    bool set_index(const std::string& index, const std::string& type, const std::string& id,
+                   const boost::property_tree::ptree& content);
 
-    bool set_index(const std::string& index, const std::string& type, const boost::property_tree::ptree &content);
- 
-    bool bulk_add(const std::string& opt, const std::string& index, const std::string& type, const std::string& id, const std::string & content);
+    bool set_index(const std::string& index, const std::string& type, const boost::property_tree::ptree& content);
+
+    bool bulk_add(const std::string& opt, const std::string& index, const std::string& type, const std::string& id,
+                  const std::string& content);
 
     bool bulk_is_full();
-    
+
     void bulk_flush();
 
-    void bulk_setbound(const int bound){ bound_ = bound; };
+    void bulk_setbound(const int bound) { bound_ = bound; };
 
    protected:
     boost::property_tree::ptree result;

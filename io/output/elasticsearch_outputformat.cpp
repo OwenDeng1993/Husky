@@ -13,8 +13,8 @@
 // limitations under the License.
 
 #include "io/output/elasticsearch_outputformat.hpp"
-#include "boost/property_tree/ptree.hpp"
 #include "boost/property_tree/json_parser.hpp"
+#include "boost/property_tree/ptree.hpp"
 
 #include <cstring>
 #include <iostream>
@@ -27,10 +27,11 @@
 
 namespace husky {
 namespace io {
-    
+
 ElasticsearchOutputFormat::ElasticsearchOutputFormat()
     : http_conn_(
-          husky::Context::get_worker_info().get_hostname(husky::Context::get_worker_info().get_process_id()) + ":9200",true) {
+          husky::Context::get_worker_info().get_hostname(husky::Context::get_worker_info().get_process_id()) + ":9200",
+          true) {
     if (!isActive())
         EXCEPTION("Cannot create engine, database is not active.");
     // geting the local node_id from the elasticsearch
@@ -44,7 +45,7 @@ ElasticsearchOutputFormat::ElasticsearchOutputFormat()
     bound_ = 1024;
 }
 
-ElasticsearchOutputFormat::~ElasticsearchOutputFormat() { }
+ElasticsearchOutputFormat::~ElasticsearchOutputFormat() {}
 
 bool ElasticsearchOutputFormat::is_setup() const { return (is_setup_); }
 
@@ -75,58 +76,59 @@ bool ElasticsearchOutputFormat::isActive() {
     return true;
 }
 
-
-bool ElasticsearchOutputFormat::set_index(const std::string& index, const std::string& type, const boost::property_tree::ptree &content) {
-
+bool ElasticsearchOutputFormat::set_index(const std::string& index, const std::string& type,
+                                          const boost::property_tree::ptree& content) {
     index_ = index;
     type_ = type;
     std::stringstream url;
     std::stringstream data;
-    write_json(data,content);
+    write_json(data, content);
     boost::property_tree::ptree result;
     url << index_ << "/" << type_ << "/";
-    http_conn_.post(url.str().c_str(),data.str().c_str(),& result);
+    http_conn_.post(url.str().c_str(), data.str().c_str(), &result);
     return true;
 }
 
-
-bool ElasticsearchOutputFormat::set_index(const std::string& index, const std::string& type, const std::string& id, const boost::property_tree::ptree& content) {
+bool ElasticsearchOutputFormat::set_index(const std::string& index, const std::string& type, const std::string& id,
+                                          const boost::property_tree::ptree& content) {
     index_ = index;
     type_ = type;
     id_ = id;
     std::stringstream url;
     std::stringstream data;
-    write_json(data,content);
+    write_json(data, content);
     boost::property_tree::ptree result;
     url << index_ << "/" << type_ << "/" << id_;
-    http_conn_.put(url.str().c_str(),data.str().c_str(),& result);
+    http_conn_.put(url.str().c_str(), data.str().c_str(), &result);
     return true;
 }
 
-bool ElasticsearchOutputFormat::bulk_add(const std::string& opt, const std::string& index, const std::string& type, const std::string& id, const std::string &content) { 
+bool ElasticsearchOutputFormat::bulk_add(const std::string& opt, const std::string& index, const std::string& type,
+                                         const std::string& id, const std::string& content) {
     index_ = index;
     type_ = type;
     id_ = id;
     opt_ = opt;
-    data<< "{\""<<opt_<<"\":{\"_index\":\""<<index_+"\",\"_type\":\""<<type_<<"\",\"_id\":\""<<id_<<"\"}}" << std::endl;
+    data << "{\"" << opt_ << "\":{\"_index\":\"" << index_ + "\",\"_type\":\"" << type_ << "\",\"_id\":\"" << id_
+         << "\"}}" << std::endl;
     records_vector_.push_back(content);
-    data<<content<<std::endl;
-    if (bulk_is_full()) bulk_flush();
+    data << content << std::endl;
+    if (bulk_is_full())
+        bulk_flush();
     return true;
 }
 
-bool ElasticsearchOutputFormat::bulk_is_full()
-{
-    if (records_vector_.size()>=bound_) return true;
+bool ElasticsearchOutputFormat::bulk_is_full() {
+    if (records_vector_.size() >= bound_)
+        return true;
     return false;
 }
- 
-void ElasticsearchOutputFormat::bulk_flush()
-{
+
+void ElasticsearchOutputFormat::bulk_flush() {
     if (records_vector_.empty())
         return;
     records_vector_.clear();
-    http_conn_.post("/_bulk",data.str().c_str(),&result);
+    http_conn_.post("/_bulk", data.str().c_str(), &result);
     data.clear();
     data.str("");
 }

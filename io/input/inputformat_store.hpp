@@ -73,7 +73,7 @@ class InputFormatStore {
     // Create ElasticsearchInputFormat
     static ElasticsearchInputFormat& create_elasticsearch_inputformat(const std::string& name = "");
     static ElasticsearchInputFormat& get_elasticsearch_inputformat(const std::string& name = "");
-    
+
     static void drop_inputformat(const std::string& name);
     static void drop_all_inputformats();
     static bool has_inputformat(const std::string& name);

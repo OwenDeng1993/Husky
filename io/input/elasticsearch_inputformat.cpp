@@ -13,8 +13,8 @@
 // limitations under the License.
 
 #include "io/input/elasticsearch_inputformat.hpp"
-#include "boost/property_tree/ptree.hpp"
 #include "boost/property_tree/json_parser.hpp"
+#include "boost/property_tree/ptree.hpp"
 
 #include <cstring>
 #include <iostream>
@@ -27,7 +27,7 @@
 
 namespace husky {
 namespace io {
-    
+
 ElasticsearchInputFormat::ElasticsearchInputFormat()
     : http_conn_(
           husky::Context::get_worker_info().get_hostname(husky::Context::get_worker_info().get_process_id()) + ":9200",
@@ -74,7 +74,6 @@ bool ElasticsearchInputFormat::isActive() {
     return true;
 }
 
-
 int ElasticsearchInputFormat::find_shard() {
     std::stringstream url;
     url << index_ << "/_search_shards?";
@@ -93,13 +92,12 @@ int ElasticsearchInputFormat::find_shard() {
                 shard_num++;
             }
         }
-        
     }
     return shard_num;
 }
 
-
-void ElasticsearchInputFormat::set_query(const std::string& index, const std::string& type, const std::string& query, int local_id) {
+void ElasticsearchInputFormat::set_query(const std::string& index, const std::string& type, const std::string& query,
+                                         int local_id) {
     index_ = index;
     type_ = type;
     query_ = query;
@@ -120,7 +118,6 @@ void ElasticsearchInputFormat::set_query(const std::string& index, const std::st
     ElasticsearchInputFormat::read(result);
 }
 
-
 bool ElasticsearchInputFormat::get_document(const std::string& index, const std::string& type, const std::string& id) {
     index_ = index;
     type_ = type;
@@ -130,12 +127,11 @@ bool ElasticsearchInputFormat::get_document(const std::string& index, const std:
     http_conn_.get(url.str().c_str(), 0, &result);
     boost::property_tree::ptree pt = result.get_child("main");
     std::stringstream ss;
-    write_json(ss,pt);
+    write_json(ss, pt);
     records_vector_.clear();
     records_vector_.push_back(ss.str());
     return pt.get<bool>("found");
 }
-
 
 int ElasticsearchInputFormat::scan_fully(const std::string& index, const std::string& type, const std::string& query,
                                          int scrollSize, int local_id) {
@@ -160,33 +156,31 @@ int ElasticsearchInputFormat::scan_fully(const std::string& index, const std::st
     std::string scrollId = scrollObject.get_child("main").get<std::string>("_scroll_id");
     int count = 0;
     records_vector_.clear();
-    
+
     while (count < total) {
         boost::property_tree::ptree result;
         http_conn_.rawpost("_search/scroll?scroll=10m", scrollId.c_str(), &result);
         scrollId = result.get_child("main").get<std::string>("_scroll_id");
         read(result, false);
-        for (auto it=result.get_child("main").get_child("hits").get_child("hits").begin();it!=result.get_child("main").get_child("hits").get_child("hits").end();++it)
+        for (auto it = result.get_child("main").get_child("hits").get_child("hits").begin();
+             it != result.get_child("main").get_child("hits").get_child("hits").end(); ++it)
             ++count;
     }
     if (count != total)
-        EXCEPTION("Result corrupted, total is different from count."); 
-   return total;
+        EXCEPTION("Result corrupted, total is different from count.");
+    return total;
 }
-
 
 void ElasticsearchInputFormat::read(boost::property_tree::ptree jresult, bool is_clear) {
     if (!records_vector_.empty() && is_clear)
         records_vector_.clear();
     boost::property_tree::ptree pt = jresult.get_child("main").get_child("hits").get_child("hits");
-    for (auto it = pt.begin();it!=pt.end();++it)
-    {
+    for (auto it = pt.begin(); it != pt.end(); ++it) {
         std::stringstream ss;
-        write_json(ss,it->second);
+        write_json(ss, it->second);
         records_vector_.push_back(ss.str());
     }
 }
-
 
 bool ElasticsearchInputFormat::next(RecordT& ref) {
     if (!records_vector_.empty()) {
