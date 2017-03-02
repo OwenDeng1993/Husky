@@ -24,8 +24,7 @@ set(input_cpps inputformat_helper.cpp
     nfs_binary_inputformat.cpp
     binary_inputformat_impl.cpp
     binary_inputformat.cpp
-    elasticsearch_inputformat.cpp
-    elasticsearch_outputformat.cpp)
+    elasticsearch_inputformat.cpp)
 
 add_subdirectory(elasticsearch_connector)
 set (input_cpps ${input_cpps} elasticsearch_connector/http.cpp)

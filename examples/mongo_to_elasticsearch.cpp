@@ -37,16 +37,15 @@ void mongo_to_es() {
     infmt.set_query("");
     
     husky::io::ElasticsearchOutputFormat outfmt;
-     
+    outfmt.bulk_setbound(1000); 
+
     auto work = [&](std::string& chunk) {
         mongo::BSONObj o = mongo::fromjson(chunk);
         o = o.removeField("_id");
         std::string id = o.getStringField("id"); 
         if (chunk.size() == 0)
             return;
-        outfmt.bulk_add("index","enwiki","wiki",id,o.jsonString());
-        if (outfmt.bulk_is_full(1024)) outfmt.bulk_flush();
-         
+        outfmt.bulk_add("index","enwiki","wiki",id,o.jsonString());         
     };
 
     husky::load(infmt, work);

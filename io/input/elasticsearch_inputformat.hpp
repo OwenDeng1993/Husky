@@ -18,7 +18,7 @@
 #include <vector>
 
 #include "io/input/elasticsearch_connector/http.h"
-#include "io/output/outputformat_base.hpp"
+#include "io/input/inputformat_base.hpp"
 #include "boost/property_tree/ptree.hpp"
 #include "boost/property_tree/json_parser.hpp"
 
@@ -26,40 +26,39 @@
 namespace husky {
 namespace io {
 
-class ElasticsearchOutputFormat final : public OutputFormatBase {
+class ElasticsearchInputFormat final : public InputFormatBase {
    public:
     typedef std::string RecordT;
-    ElasticsearchOutputFormat();
-    virtual ~ElasticsearchOutputFormat();
+    ElasticsearchInputFormat();
+    virtual ~ElasticsearchInputFormat();
     virtual bool is_setup() const;
     bool isActive();
+    int find_shard();
 
-    bool set_index(const std::string& index, const std::string& type, const std::string& id, const boost::property_tree::ptree & content);
+    void set_query(const std::string& index, const std::string& type, const std::string& query, int local_id = 0);
 
-    bool set_index(const std::string& index, const std::string& type, const boost::property_tree::ptree &content);
- 
-    bool bulk_add(const std::string& opt, const std::string& index, const std::string& type, const std::string& id, const std::string & content);
+    bool get_document(const std::string& index, const std::string& type, const std::string& id);
 
-    bool bulk_is_full();
-    
-    void bulk_flush();
+    int scan_fully(const std::string& index, const std::string& type, const std::string& query, int scrollSize,
+                   int local_id = 0);
 
-    void bulk_setbound(const int bound){ bound_ = bound; };
+    virtual bool next(RecordT& ref);
+
+    void read(boost::property_tree::ptree jresult, bool is_clear = true);
 
    protected:
+    bool need_auth_ = false;
     boost::property_tree::ptree result;
     std::string node_;
     std::string node_id;
     std::string index_;
     std::string type_;
     std::string id_;
-    std::string opt_;
-    int bound_;
-    boost::property_tree::ptree content_;
+    std::string query_;
     std::string shard_;
     std::string router_;
-    std::vector<std::string> records_vector_;
-    std::stringstream data;
+    std::vector<RecordT> records_vector_;
+
     /// HTTP Connexion module.
     HTTP http_conn_;
 };

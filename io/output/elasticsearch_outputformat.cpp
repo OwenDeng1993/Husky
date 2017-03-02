@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "io/input/elasticsearch_outputformat.hpp"
+#include "io/output/elasticsearch_outputformat.hpp"
 #include "boost/property_tree/ptree.hpp"
 #include "boost/property_tree/json_parser.hpp"
 
@@ -40,8 +40,8 @@ ElasticsearchOutputFormat::ElasticsearchOutputFormat()
     boost::property_tree::ptree msg;
     http_conn_.get(oss.str().c_str(), 0, &msg);
     node_id = msg.get_child("main").get_child("nodes").begin()->first;
-   // records_vector_.clear();
-   // opts_vector_.clear();
+    records_vector_.clear();
+    bound_ = 1024;
 }
 
 ElasticsearchOutputFormat::~ElasticsearchOutputFormat() { }
@@ -108,19 +108,16 @@ bool ElasticsearchOutputFormat::bulk_add(const std::string& opt, const std::stri
     type_ = type;
     id_ = id;
     opt_ = opt;
-    //std::stringstream str;
     data<< "{\""<<opt_<<"\":{\"_index\":\""<<index_+"\",\"_type\":\""<<type_<<"\",\"_id\":\""<<id_<<"\"}}" << std::endl;
-    //opts_vector_.push_back(str);
     records_vector_.push_back(content);
-    //std::stringstream str;
-    //write_json(str,content);
     data<<content<<std::endl;
+    if (bulk_is_full()) bulk_flush();
     return true;
 }
 
-bool ElasticsearchOutputFormat::bulk_is_full(int bound)
+bool ElasticsearchOutputFormat::bulk_is_full()
 {
-    if (records_vector_.size()>=bound) return true;
+    if (records_vector_.size()>=bound_) return true;
     return false;
 }
  
@@ -128,10 +125,10 @@ void ElasticsearchOutputFormat::bulk_flush()
 {
     if (records_vector_.empty())
         return;
-        records_vector_.clear();
-        http_conn_.post("/_bulk",data.str().c_str(),&result);
-        data.clear();
-        data.str("");
+    records_vector_.clear();
+    http_conn_.post("/_bulk",data.str().c_str(),&result);
+    data.clear();
+    data.str("");
 }
 
 }  // namespace io
