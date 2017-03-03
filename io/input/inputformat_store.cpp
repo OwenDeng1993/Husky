@@ -109,7 +109,6 @@ ElasticsearchInputFormat& InputFormatStore::create_elasticsearch_inputformat() {
     return *elasticsearch_input_format;
 }
 
-
 void InputFormatStore::drop_all_inputformats() {
     if (s_inputformat_map == nullptr)
         return;
