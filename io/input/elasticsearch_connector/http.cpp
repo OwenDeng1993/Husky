@@ -17,8 +17,9 @@
  * under the License.
  */
 
+#include "io/input/elasticsearch_connector/http.h"
+
 #include <arpa/inet.h>
-#include <fcntl.h>
 #include <fcntl.h>
 #include <netdb.h>
 #include <sys/types.h>
@@ -30,7 +31,6 @@
 #include <iostream>
 #include <sstream>
 
-#include "io/input/elasticsearch_connector/http.h"
 #include "boost/property_tree/json_parser.hpp"
 #include "boost/property_tree/ptree.hpp"
 
@@ -173,8 +173,9 @@ bool HTTP::connect() {
             close(_sockfd); /* just in case */
             EXCEPTION("error set by getsockopt.");
         }
-    } else
+    } else {
         EXCEPTION("select error: sockfd not set");
+    }
 
     if (error()) {
         close(_sockfd); /* just in case */
@@ -566,10 +567,10 @@ size_t HTTP::appendChunk(std::string& output, char* msg, size_t msgSize) {
     assert(msgSize + msg > afterSize + 2);
 
     // Append the result to the output; remove the \r\n as line separator.
-    if (chunkSize + afterSize + 2 <= msgSize + msg)
+    if (chunkSize + afterSize + 2 <= msgSize + msg) {
         // The chunksize is smaller, we take only the given size.
         output.append(afterSize, chunkSize);
-    else {
+    } else {
         // If the chunksize is higher, we take only what we got in the answer.
         output.append(afterSize, msgSize - (afterSize - msg));
     }
@@ -742,9 +743,8 @@ unsigned int HTTP::parseMessage(std::string& output, size_t& contentLength, bool
                 result = ERROR;
                 return statusCode;
             }
-        }
-        // We received the content-length.
-        else {
+        } else {
+            // We received the content-length.else
             contentLength = atoi(contentLenghtPos + 15);
 
             // Error due to conversion may set errno.

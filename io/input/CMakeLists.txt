@@ -27,7 +27,7 @@ file(GLOB io-input-src-files
     binary_inputformat_impl.cpp
     binary_inputformat.cpp
     inputformat_store.cpp
-	elasticsearch_inputformat.cpp
+    elasticsearch_inputformat.cpp
     elasticsearch_connector/http.cpp)
 	
 if(LIBHDFS3_FOUND)
