@@ -12,21 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <string>
-#include <vector>
 #include <set>
+#include <string>
 #include <utility>
+#include <vector>
 
-#include "boost/tokenizer.hpp"
-#include "boost/property_tree/ptree.hpp"
 #include "boost/property_tree/json_parser.hpp"
+#include "boost/property_tree/ptree.hpp"
+#include "boost/tokenizer.hpp"
 
 #include "base/serialization.hpp"
 #include "core/engine.hpp"
 #include "io/input/inputformat_store.hpp"
 #include "lib/aggregator_factory.hpp"
-
-
 
 class Word {
    public:
@@ -45,31 +43,30 @@ bool operator<(const std::pair<int, std::string>& a, const std::pair<int, std::s
 }
 
 void wc() {
-    
     auto& infmt = husky::io::InputFormatStore::create_elasticsearch_inputformat();
     std::string index("enwiki");
     std::string type("wiki");
     std::string query(" { \"query\": { \"match_all\":{}}}");
-    infmt.scan_fully(index,type,query,1000);
-    
+    infmt.scan_fully(index, type, query, 1000);
+
     auto& word_list = husky::ObjListStore::create_objlist<Word>();
     auto& ch = husky::ChannelStore::create_push_combined_channel<int, husky::SumCombiner<int>>(infmt, word_list);
-    
-    auto parse_wc = [&](std::string & chunk) { 
+
+    auto parse_wc = [&](std::string& chunk) {
         if (chunk.size() == 0)
             return;
         boost::property_tree::ptree pt;
-        std::stringstream ss(chunk); 
-        read_json(ss,pt);
+        std::stringstream ss(chunk);
+        read_json(ss, pt);
         std::string content = pt.get_child("_source").get<std::string>("content");
         boost::char_separator<char> sep(" \t");
         boost::tokenizer<boost::char_separator<char>> tok(content, sep);
         for (auto& w : tok) {
             ch.push(1, w);
         }
-    };  
-    husky::load(infmt,parse_wc);
-  
+    };
+    husky::load(infmt, parse_wc);
+
     // Show topk words.
     const int kMaxNum = 100;
     typedef std::set<std::pair<int, std::string>> TopKPairs;

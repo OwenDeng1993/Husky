@@ -45,7 +45,7 @@ class ElasticsearchOutputFormat final : public OutputFormatBase {
 
     void bulk_flush();
 
-    void bulk_setbound(const int bound) { bound_ = bound; };
+    void bulk_setbound(const int bound) { bound_ = bound;}
 
    protected:
     boost::property_tree::ptree result;

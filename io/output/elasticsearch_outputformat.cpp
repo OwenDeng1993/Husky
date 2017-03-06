@@ -12,10 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "io/output/elasticsearch_outputformat.hpp"
-#include "boost/property_tree/json_parser.hpp"
-#include "boost/property_tree/ptree.hpp"
-
 #include <cstring>
 #include <iostream>
 #include <list>
@@ -23,7 +19,10 @@
 #include <string>
 #include <vector>
 
+#include "boost/property_tree/json_parser.hpp"
+#include "boost/property_tree/ptree.hpp"
 #include "core/context.hpp"
+#include "io/output/elasticsearch_outputformat.hpp"
 
 namespace husky {
 namespace io {

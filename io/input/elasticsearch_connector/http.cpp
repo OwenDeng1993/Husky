@@ -17,10 +17,6 @@
  * under the License.
  */
 
-#include "http.h"
-#include "boost/property_tree/json_parser.hpp"
-#include "boost/property_tree/ptree.hpp"
-
 #include <arpa/inet.h>
 #include <fcntl.h>
 #include <fcntl.h>
@@ -33,6 +29,10 @@
 #include <cstring>
 #include <iostream>
 #include <sstream>
+
+#include "io/input/elasticsearch_connector/http.h"
+#include "boost/property_tree/json_parser.hpp"
+#include "boost/property_tree/ptree.hpp"
 
 /** Returns true on success, or false if there was an error */
 bool SetSocketBlockingEnabled(int fd, bool blocking) {

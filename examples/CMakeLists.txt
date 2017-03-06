@@ -43,13 +43,6 @@ target_link_libraries(LabeledPoint ${husky})
 target_link_libraries(LabeledPoint ${HUSKY_EXTERNAL_LIB})
 husky_default_properties(LabeledPoint)
 
-
-# Mongo_to_ES
-add_executable(Mongo_to_ES mongo_to_elasticsearch.cpp)
-target_link_libraries(Mongo_to_ES ${husky})
-target_link_libraries(Mongo_to_ES ${HUSKY_EXTERNAL_LIB})
-husky_default_properties(Mongo_to_ES)
-
 # WordCountMR
 add_executable(WordCountMR wc_mr.cpp)
 target_link_libraries(WordCountMR ${husky})
