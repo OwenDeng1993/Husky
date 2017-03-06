@@ -28,7 +28,7 @@ namespace io {
 class ElasticsearchInputFormat final : public InputFormatBase {
    public:
     typedef std::string RecordT;
-    ElasticsearchInputFormat();
+    ElasticsearchInputFormat(std::string port = "9200");
     virtual ~ElasticsearchInputFormat();
     virtual bool is_setup() const;
     bool isActive();

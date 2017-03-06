@@ -27,10 +27,9 @@
 namespace husky {
 namespace io {
 
-ElasticsearchInputFormat::ElasticsearchInputFormat()
+ElasticsearchInputFormat::ElasticsearchInputFormat(std::string port)
     : http_conn_(
-          husky::Context::get_worker_info().get_hostname(husky::Context::get_worker_info().get_process_id()) + ":9200",
-          true) {
+          husky::Context::get_worker_info().get_hostname(husky::Context::get_worker_info().get_process_id()) + ":" + port, true) {
     if (!isActive())
         EXCEPTION("Cannot create engine, database is not active.");
     // geting the local node_id from the elasticsearch
