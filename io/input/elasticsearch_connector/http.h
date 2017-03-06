@@ -17,8 +17,7 @@
  * under the License.
  */
 
-#ifndef HTTP_H
-#define HTTP_H
+#pragma once
 
 #include <netinet/in.h>
 #include <sys/socket.h>
@@ -165,4 +164,3 @@ class HTTP {
     std::mutex _requestMutex;
 };
 
-#endif  // HTTP_H
