@@ -48,7 +48,7 @@ class InputFormatStore {
 #ifdef WITH_MONGODB
     static MongoDBInputFormat& create_mongodb_inputformat();
 #endif
-    static ElasticsearchInputFormat& create_elasticsearch_inputformat(std::string server);
+    static ElasticsearchInputFormat& create_elasticsearch_inputformat(std::string server, bool is_optimize = true);
 
     static void drop_all_inputformats();
     static void init_inputformat_map();

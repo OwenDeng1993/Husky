@@ -34,7 +34,7 @@ class ElasticsearchInputFormat final : public InputFormatBase {
     bool isActive();
     int find_shard();
 
-    void set_query(const std::string& index, const std::string& type, const std::string& query, int local_id = 0);
+    void set_query(const std::string& index, const std::string& type, const std::string& query);
 
     bool get_document(const std::string& index, const std::string& type, const std::string& id);
 

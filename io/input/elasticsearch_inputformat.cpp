@@ -29,9 +29,6 @@ namespace husky {
 namespace io {
 
 ElasticsearchInputFormat::ElasticsearchInputFormat(const std::string& server, const bool& is_optimize) {
-    /*  HTTP http_conn_(
-            husky::Context::get_worker_info().get_hostname(husky::Context::get_worker_info().get_process_id()) + ":" +
-       port, false)*/
     server_ = server;
     if (is_optimize)
         server_ = husky::Context::get_worker_info().get_hostname(husky::Context::get_worker_info().get_process_id()) +
@@ -102,8 +99,7 @@ int ElasticsearchInputFormat::find_shard() {
     return shard_num;
 }
 
-void ElasticsearchInputFormat::set_query(const std::string& index, const std::string& type, const std::string& query,
-                                         int local_id) {
+void ElasticsearchInputFormat::set_query(const std::string& index, const std::string& type, const std::string& query) {
     index_ = index;
     type_ = type;
     query_ = query;
