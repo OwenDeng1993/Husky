@@ -100,11 +100,11 @@ MongoDBInputFormat& InputFormatStore::create_mongodb_inputformat() {
 }
 #endif
 
-ElasticsearchInputFormat& InputFormatStore::create_elasticsearch_inputformat() {
+ElasticsearchInputFormat& InputFormatStore::create_elasticsearch_inputformat(std::string server) {
     InputFormatMap& inputformat_map = get_inputformat_map();
     int id = g_gen_inputformat_id++;
     ASSERT_MSG(inputformat_map.find(id) == inputformat_map.end(), "Should not be reached");
-    auto* elasticsearch_input_format = new ElasticsearchInputFormat();
+    auto* elasticsearch_input_format = new ElasticsearchInputFormat(server);
     inputformat_map.insert({id, elasticsearch_input_format});
     return *elasticsearch_input_format;
 }

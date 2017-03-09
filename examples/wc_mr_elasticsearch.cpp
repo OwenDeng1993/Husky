@@ -42,14 +42,13 @@ bool operator<(const std::pair<int, std::string>& a, const std::pair<int, std::s
     return a.first == b.first ? a.second < b.second : a.first < b.first;
 }
 
-void wc() { 
+void wc() {
     std::string server(husky::Context::get_param("elasticsearch_server"));
     std::string index(husky::Context::get_param("elasticsearch_index"));
     std::string type(husky::Context::get_param("elaticsearch_type"));
-    auto& infmt = husky::io::InputFormatStore::create_elasticsearch_inputformat();
+    auto& infmt = husky::io::InputFormatStore::create_elasticsearch_inputformat(server);
     std::string query(" { \"query\": { \"match_all\":{}}}");
     infmt.scan_fully(index, type, query, 1000);
-
     auto& word_list = husky::ObjListStore::create_objlist<Word>();
     auto& ch = husky::ChannelStore::create_push_combined_channel<int, husky::SumCombiner<int>>(infmt, word_list);
 

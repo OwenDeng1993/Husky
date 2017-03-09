@@ -83,9 +83,9 @@ TEST_F(TestInputFormatStore, MongoDBInputFormat) {
 #endif
 
 TEST_F(TestInputFormatStore, ElasticsearchInputFormat) {
-    auto& infmt1 = InputFormatStore::create_elasticsearch_inputformat();
+    auto& infmt1 = InputFormatStore::create_elasticsearch_inputformat("192.168.50.5:9200");
     EXPECT_EQ(InputFormatStore::size(), 1);
-    auto& infmt2 = InputFormatStore::create_elasticsearch_inputformat();
+    auto& infmt2 = InputFormatStore::create_elasticsearch_inputformat("192.168.50.5:9200");
     EXPECT_EQ(InputFormatStore::size(), 2);
     InputFormatStore::drop_all_inputformats();
 }

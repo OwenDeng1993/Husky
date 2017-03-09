@@ -22,14 +22,20 @@
 #include "boost/property_tree/json_parser.hpp"
 #include "boost/property_tree/ptree.hpp"
 #include "core/context.hpp"
+#include "io/input/elasticsearch_connector/http.h"
 #include "io/input/elasticsearch_inputformat.hpp"
 
 namespace husky {
 namespace io {
 
-ElasticsearchInputFormat::ElasticsearchInputFormat(std::string port)
-    : http_conn_(
-          husky::Context::get_worker_info().get_hostname(husky::Context::get_worker_info().get_process_id()) + ":" + port, false) {
+ElasticsearchInputFormat::ElasticsearchInputFormat(const std::string& server, const bool& is_optimize) {
+    /*  HTTP http_conn_(
+            husky::Context::get_worker_info().get_hostname(husky::Context::get_worker_info().get_process_id()) + ":" +
+       port, false)*/
+    server_ = server;
+    if (is_optimize)
+        server_ = husky::Context::get_worker_info().get_hostname(husky::Context::get_worker_info().get_process_id()) +
+                  ":" + "9200";
     if (!isActive())
         EXCEPTION("Cannot create engine, database is not active.");
     // geting the local node_id from the elasticsearch
@@ -37,6 +43,7 @@ ElasticsearchInputFormat::ElasticsearchInputFormat(std::string port)
     std::ostringstream oss;
     oss << "_nodes/_local";
     boost::property_tree::ptree msg;
+    HTTP http_conn_(server_, false);
     http_conn_.get(oss.str().c_str(), 0, &msg);
     node_id = msg.get_child("main").get_child("nodes").begin()->first;
 }
@@ -47,7 +54,7 @@ bool ElasticsearchInputFormat::is_setup() const { return (is_setup_); }
 
 bool ElasticsearchInputFormat::isActive() {
     boost::property_tree::ptree root;
-
+    HTTP http_conn_(server_, false);
     try {
         http_conn_.get(0, 0, &root);
     } catch (Exception& e) {
@@ -73,6 +80,7 @@ bool ElasticsearchInputFormat::isActive() {
 }
 
 int ElasticsearchInputFormat::find_shard() {
+    HTTP http_conn_(server_, false);
     std::stringstream url;
     url << index_ << "/_search_shards?";
     boost::property_tree::ptree obj;
@@ -86,7 +94,7 @@ int ElasticsearchInputFormat::find_shard() {
             std::string _node = obj_.get<std::string>("node");
             std::string _pri = obj_.get<std::string>("primary");
             if (_node == node_id && _pri == "true") {
-                shard_ = shard_ + "," + obj_.get<std::string>("shard");
+                records_shards_[shard_num] = obj_.get<std::string>("shard");
                 shard_num++;
             }
         }
@@ -99,10 +107,21 @@ void ElasticsearchInputFormat::set_query(const std::string& index, const std::st
     index_ = index;
     type_ = type;
     query_ = query;
+    HTTP http_conn_(server_, false);
     std::stringstream url;
-    if (husky::Context::get_local_tid() != local_id)
-        return;
     int shard_number = find_shard();
+    int tid = husky::Context::get_local_tid();
+    if (tid >= shard_number)
+        return;
+    int k = 0;
+    std::string shard_ = "";
+    int workers_number = husky::Context::get_num_local_workers();
+    while ((tid + k * workers_number) <= shard_number) {
+        if (k > 0)
+            shard_ = shard_ + ",";
+        shard_ = shard_ + records_shards_[tid + k * workers_number];
+        k++;
+    }
     url << index_ << "/" << type_ << "/_search?preference=_shards:" << shard_ << ";_only_node:" << node_id;
     http_conn_.post(url.str().c_str(), query_.c_str(), &result);
     if (result.get_child("main").empty()) {
@@ -117,6 +136,7 @@ void ElasticsearchInputFormat::set_query(const std::string& index, const std::st
 }
 
 bool ElasticsearchInputFormat::get_document(const std::string& index, const std::string& type, const std::string& id) {
+    HTTP http_conn_(server_, false);
     index_ = index;
     type_ = type;
     id_ = id;
@@ -132,16 +152,25 @@ bool ElasticsearchInputFormat::get_document(const std::string& index, const std:
 }
 
 int ElasticsearchInputFormat::scan_fully(const std::string& index, const std::string& type, const std::string& query,
-                                         int scrollSize, int local_id) {
+                                         int scrollSize) {
+    HTTP http_conn_(server_, false);
     index_ = index;
     type_ = type;
     query_ = query;
     std::stringstream scrollUrl;
-    if (husky::Context::get_local_tid() != local_id)
-        return 0;
     int shard_number = find_shard();
-    if (shard_number == 0)
+    int tid = husky::Context::get_local_tid();
+    if (tid >= shard_number)
         return 0;
+    int k = 0;
+    std::string shard_ = "";
+    int workers_number = husky::Context::get_num_local_workers();
+    while ((tid + k * workers_number) <= shard_number) {
+        if (k > 0)
+            shard_ = shard_ + ",";
+        shard_ = shard_ + records_shards_[tid + k * workers_number];
+        k++;
+    }
     scrollUrl << index << "/" << type << "/_search?preference=_shards:" << shard_ << ";_only_node:" << node_id
               << "&search_type=scan&scroll=10m&size=" << scrollSize;
     boost::property_tree::ptree scrollObject;

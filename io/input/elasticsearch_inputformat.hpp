@@ -28,7 +28,7 @@ namespace io {
 class ElasticsearchInputFormat final : public InputFormatBase {
    public:
     typedef std::string RecordT;
-    ElasticsearchInputFormat(std::string port = "9200");
+    ElasticsearchInputFormat(const std::string& server, const bool& is_optimaze = true);
     virtual ~ElasticsearchInputFormat();
     virtual bool is_setup() const;
     bool isActive();
@@ -38,8 +38,7 @@ class ElasticsearchInputFormat final : public InputFormatBase {
 
     bool get_document(const std::string& index, const std::string& type, const std::string& id);
 
-    int scan_fully(const std::string& index, const std::string& type, const std::string& query, int scrollSize,
-                   int local_id = 0);
+    int scan_fully(const std::string& index, const std::string& type, const std::string& query, int scrollSize = 100);
 
     virtual bool next(RecordT& ref);
 
@@ -50,16 +49,14 @@ class ElasticsearchInputFormat final : public InputFormatBase {
     boost::property_tree::ptree result;
     std::string node_;
     std::string node_id;
+    std::string server_;
     std::string index_;
     std::string type_;
     std::string id_;
     std::string query_;
-    std::string shard_;
     std::string router_;
     std::vector<RecordT> records_vector_;
-
-    /// HTTP Connexion module.
-    HTTP http_conn_;
+    std::string records_shards_[100];
 };
 
 }  // namespace io
