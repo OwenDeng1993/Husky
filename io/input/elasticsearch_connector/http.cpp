@@ -303,7 +303,7 @@ bool HTTP::sendMessage(const char* method, const char* endUrl, const char* data,
     requestString += std::string("Accept: */*\r\n");
     if (_keepAlive)
         requestString += std::string("Connection: Keep-Alive\r\n");
-    // requestString += "Connection: close\r\n";
+    else requestString += std::string("Connection: close\r\n");
 
     // If no data, send the header and return.
     if (data == 0) {

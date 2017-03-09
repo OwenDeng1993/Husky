@@ -42,10 +42,11 @@ bool operator<(const std::pair<int, std::string>& a, const std::pair<int, std::s
     return a.first == b.first ? a.second < b.second : a.first < b.first;
 }
 
-void wc() {
+void wc() { 
+    std::string server(husky::Context::get_param("elasticsearch_server"));
+    std::string index(husky::Context::get_param("elasticsearch_index"));
+    std::string type(husky::Context::get_param("elaticsearch_type"));
     auto& infmt = husky::io::InputFormatStore::create_elasticsearch_inputformat();
-    std::string index("enwiki");
-    std::string type("wiki");
     std::string query(" { \"query\": { \"match_all\":{}}}");
     infmt.scan_fully(index, type, query, 1000);
 
@@ -109,7 +110,10 @@ void wc() {
 
 int main(int argc, char** argv) {
     std::vector<std::string> args;
-    if (husky::init_with_args(argc, argv)) {
+    args.push_back("elasticsearch_server");
+    args.push_back("elasticsearch_index");
+    args.push_back("elasticsearch_type");
+    if (husky::init_with_args(argc, argv, args)) {
         husky::run_job(wc);
         return 0;
     }
