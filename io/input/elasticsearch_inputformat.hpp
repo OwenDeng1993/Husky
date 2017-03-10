@@ -28,11 +28,13 @@ namespace io {
 class ElasticsearchInputFormat final : public InputFormatBase {
    public:
     typedef std::string RecordT;
-    ElasticsearchInputFormat(const std::string& server, const bool& is_optimaze = true);
+    ElasticsearchInputFormat(const bool& is_optimaze = true);
     virtual ~ElasticsearchInputFormat();
     virtual bool is_setup() const;
     bool isActive();
     int find_shard();
+
+    bool set_server(const std::string& server);
 
     void set_query(const std::string& index, const std::string& type, const std::string& query);
 
@@ -45,7 +47,7 @@ class ElasticsearchInputFormat final : public InputFormatBase {
     void read(boost::property_tree::ptree jresult, bool is_clear = true);
 
    protected:
-    bool need_auth_ = false;
+    bool is_optimize_;
     boost::property_tree::ptree result;
     std::string node_;
     std::string node_id;

@@ -46,7 +46,8 @@ void wc() {
     std::string server(husky::Context::get_param("elasticsearch_server"));
     std::string index(husky::Context::get_param("elasticsearch_index"));
     std::string type(husky::Context::get_param("elaticsearch_type"));
-    auto& infmt = husky::io::InputFormatStore::create_elasticsearch_inputformat(server);
+    auto& infmt = husky::io::InputFormatStore::create_elasticsearch_inputformat();
+    infmt.set_server(server);
     std::string query(" { \"query\": { \"match_all\":{}}}");
     infmt.scan_fully(index, type, query, 1000);
     auto& word_list = husky::ObjListStore::create_objlist<Word>();

@@ -28,13 +28,18 @@
 namespace husky {
 namespace io {
 
-ElasticsearchInputFormat::ElasticsearchInputFormat(const std::string& server, const bool& is_optimize) {
+ElasticsearchInputFormat::ElasticsearchInputFormat(const bool& is_optimize) {
+    records_vector_.clear();
+    is_optimize_ = is_optimize;
+}
+
+bool ElasticsearchInputFormat::set_server(const std::string &server){
     server_ = server;
-    if (is_optimize)
+    if (is_optimize_)
         server_ = husky::Context::get_worker_info().get_hostname(husky::Context::get_worker_info().get_process_id()) +
                   ":" + "9200";
     if (!isActive())
-        EXCEPTION("Cannot create engine, database is not active.");
+      EXCEPTION("Cannot create engine, database is not active.");
     // geting the local node_id from the elasticsearch
     is_setup_ = 1;
     std::ostringstream oss;
@@ -43,6 +48,7 @@ ElasticsearchInputFormat::ElasticsearchInputFormat(const std::string& server, co
     HTTP http_conn_(server_, false);
     http_conn_.get(oss.str().c_str(), 0, &msg);
     node_id = msg.get_child("main").get_child("nodes").begin()->first;
+    return true;
 }
 
 ElasticsearchInputFormat::~ElasticsearchInputFormat() { records_vector_.clear(); }
