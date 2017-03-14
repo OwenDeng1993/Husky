@@ -91,17 +91,17 @@ HTTP::HTTP(std::string uri, bool keepAlive)
 
     // print information about this host:
     struct in_addr** addr_list;
-    printf("Official name is: %s", host->h_name);
-    printf(", IP addresses: ");
+    // printf("Official name is: %s", host->h_name);
+    // printf(", IP addresses: ");
     addr_list = (struct in_addr**) host->h_addr_list;
-    for (int i = 0; addr_list[i] != NULL; i++)
+    /*for (int i = 0; addr_list[i] != NULL; i++)
         printf("%s ", inet_ntoa(*addr_list[i]));
 
     if (_keepAlive)
         printf(", session keep alive connection.\n");
     else
         printf(", session is not keep alive connection.\n");
-
+    */
     bzero(&_client, sizeof(_client));
 
     _client.sin_family = AF_INET;
@@ -303,7 +303,8 @@ bool HTTP::sendMessage(const char* method, const char* endUrl, const char* data,
     requestString += std::string("Accept: */*\r\n");
     if (_keepAlive)
         requestString += std::string("Connection: Keep-Alive\r\n");
-    else requestString += std::string("Connection: close\r\n");
+    else
+        requestString += std::string("Connection: close\r\n");
 
     // If no data, send the header and return.
     if (data == 0) {

@@ -22,32 +22,42 @@
 #include "boost/property_tree/json_parser.hpp"
 #include "boost/property_tree/ptree.hpp"
 #include "core/context.hpp"
+#include "core/constants.hpp"
+#include "core/coordinator.hpp"
 #include "io/input/elasticsearch_connector/http.h"
 #include "io/input/elasticsearch_inputformat.hpp"
+#include "base/exception.hpp"
+#include "base/serialization.hpp"
 
 namespace husky {
 namespace io {
 
-ElasticsearchInputFormat::ElasticsearchInputFormat(const bool& is_optimize) {
+ElasticsearchInputFormat::ElasticsearchInputFormat(const bool local_prefer) {
     records_vector_.clear();
-    is_optimize_ = is_optimize;
+    is_local_prefer_ = local_prefer;
 }
 
-bool ElasticsearchInputFormat::set_server(const std::string &server){
+bool ElasticsearchInputFormat::set_server(const std::string &server){    
     server_ = server;
-    if (is_optimize_)
+    if (is_local_prefer_){       
         server_ = husky::Context::get_worker_info().get_hostname(husky::Context::get_worker_info().get_process_id()) +
                   ":" + "9200";
-    if (!isActive())
-      EXCEPTION("Cannot create engine, database is not active.");
+        if (!is_active())
+            throw base::HuskyException("Cannot create local engine, database is not active and try the remote engine");
+    } else {
+        server_ = server;
+        if (!is_active())
+            throw base::HuskyException("Cannot connect to server");
+    }
     // geting the local node_id from the elasticsearch
-    is_setup_ = 1;
     std::ostringstream oss;
     oss << "_nodes/_local";
     boost::property_tree::ptree msg;
     HTTP http_conn_(server_, false);
     http_conn_.get(oss.str().c_str(), 0, &msg);
     node_id = msg.get_child("main").get_child("nodes").begin()->first;
+    is_setup_ = 1; 
+    
     return true;
 }
 
@@ -55,7 +65,7 @@ ElasticsearchInputFormat::~ElasticsearchInputFormat() { records_vector_.clear();
 
 bool ElasticsearchInputFormat::is_setup() const { return (is_setup_); }
 
-bool ElasticsearchInputFormat::isActive() {
+bool ElasticsearchInputFormat::is_active() {
     boost::property_tree::ptree root;
     HTTP http_conn_(server_, false);
     try {
@@ -109,32 +119,27 @@ void ElasticsearchInputFormat::set_query(const std::string& index, const std::st
     index_ = index;
     type_ = type;
     query_ = query;
-    HTTP http_conn_(server_, false);
-    std::stringstream url;
-    int shard_number = find_shard();
-    int tid = husky::Context::get_local_tid();
-    if (tid >= shard_number)
-        return;
-    int k = 0;
-    std::string shard_ = "";
-    int workers_number = husky::Context::get_num_local_workers();
-    while ((tid + k * workers_number) <= shard_number) {
-        if (k > 0)
-            shard_ = shard_ + ",";
-        shard_ = shard_ + records_shards_[tid + k * workers_number];
-        k++;
+    HTTP http_conn_(server_, true);
+    records_vector_.clear();
+    while (true){
+        std::stringstream url;
+        BinStream question; 
+        question << server_ << index_ << node_id;
+        BinStream answer = husky::Context::get_coordinator()->ask_master(question,   husky::TYPE_ELASTICSEARCH_REQ);
+        std::string shard_;
+        answer >> shard_;
+        if (shard_ == "No shard") return;
+        url << index_ << "/" << type_ << "/_search?preference=_shards:" << shard_; 
+        http_conn_.post(url.str().c_str(), query_.c_str(), &result);
+        if (result.get_child("main").empty()) {
+            std::cout << url.str() << " -d " << query << std::endl;
+            throw base::HuskyException("Search failed.");
+        }
+        if (result.get_child("main").get<bool>("timed_out")) {
+            throw base::HuskyException("Search timed out.");
+        }
+        ElasticsearchInputFormat::read(result,false);
     }
-    url << index_ << "/" << type_ << "/_search?preference=_shards:" << shard_ << ";_only_node:" << node_id;
-    http_conn_.post(url.str().c_str(), query_.c_str(), &result);
-    if (result.get_child("main").empty()) {
-        std::cout << url.str() << " -d " << query << std::endl;
-        EXCEPTION("Search failed.");
-    }
-
-    if (result.get_child("main").get<bool>("timed_out")) {
-        EXCEPTION("Search timed out.");
-    }
-    ElasticsearchInputFormat::read(result);
 }
 
 bool ElasticsearchInputFormat::get_document(const std::string& index, const std::string& type, const std::string& id) {
@@ -155,49 +160,41 @@ bool ElasticsearchInputFormat::get_document(const std::string& index, const std:
 
 int ElasticsearchInputFormat::scan_fully(const std::string& index, const std::string& type, const std::string& query,
                                          int scrollSize) {
-    HTTP http_conn_(server_, false);
+    HTTP http_conn_(server_, true);
     index_ = index;
     type_ = type;
     query_ = query;
-    std::stringstream scrollUrl;
-    int shard_number = find_shard();
-    int tid = husky::Context::get_local_tid();
-    if (tid >= shard_number)
-        return 0;
-    int k = 0;
-    std::string shard_ = "";
-    int workers_number = husky::Context::get_num_local_workers();
-    while ((tid + k * workers_number) <= shard_number) {
-        if (k > 0)
-            shard_ = shard_ + ",";
-        shard_ = shard_ + records_shards_[tid + k * workers_number];
-        k++;
-    }
-    scrollUrl << index << "/" << type << "/_search?preference=_shards:" << shard_ << ";_only_node:" << node_id
-              << "&search_type=scan&scroll=10m&size=" << scrollSize;
-    boost::property_tree::ptree scrollObject;
-    http_conn_.post(scrollUrl.str().c_str(), query_.c_str(), &scrollObject);
-    if (scrollObject.get_child("main").get_child("hits").empty())
-        EXCEPTION("Result corrupted, no member \"hits\".");
-    if (!scrollObject.get_child("main").get_child("hits").get<int>("total"))
-        EXCEPTION("Result corrupted, no member \"total\" nested in \"hits\".");
-    int total = scrollObject.get_child("main").get_child("hits").get<int>("total");
-    std::string scrollId = scrollObject.get_child("main").get<std::string>("_scroll_id");
-    int count = 0;
     records_vector_.clear();
+    bool is_first = true;
+    while (true){    
+        BinStream question;
+        question << server_ << index_ << node_id;
+        BinStream answer = husky::Context::get_coordinator()->ask_master(question,   husky::TYPE_ELASTICSEARCH_REQ);
+        std::string shard_;
+        answer >> shard_;
+        if (shard_ == "No shard") break;
 
-    while (count < total) {
-        boost::property_tree::ptree result;
-        http_conn_.rawpost("_search/scroll?scroll=10m", scrollId.c_str(), &result);
-        scrollId = result.get_child("main").get<std::string>("_scroll_id");
-        read(result, false);
-        for (auto it = result.get_child("main").get_child("hits").get_child("hits").begin();
-             it != result.get_child("main").get_child("hits").get_child("hits").end(); ++it)
-            ++count;
+	    std::stringstream scrollUrl;
+        scrollUrl << index << "/" << type << "/_search?preference=_shards:" << shard_ << "&search_type=scan&scroll=10m&size=" << scrollSize;
+        boost::property_tree::ptree scrollObject;
+        http_conn_.post(scrollUrl.str().c_str(), query_.c_str(), &scrollObject);
+        if (scrollObject.get_child("main").get_child("hits").empty())
+            EXCEPTION("Result corrupted, no member \"hits\".");
+        if (!scrollObject.get_child("main").get_child("hits").get<int>("total"))
+            EXCEPTION("Result corrupted, no member \"total\" nested in \"hits\".");
+        int total = scrollObject.get_child("main").get_child("hits").get<int>("total");
+        std::string scrollId = scrollObject.get_child("main").get<std::string>("_scroll_id");
+        int count = 0;  
+        while (count < total) {
+            boost::property_tree::ptree result;
+            http_conn_.rawpost("_search/scroll?scroll=10m", scrollId.c_str(), &result);
+            scrollId = result.get_child("main").get<std::string>("_scroll_id");
+            read(result, false);
+            for (auto it = result.get_child("main").get_child("hits").get_child("hits").begin(); it != result.get_child("main").get_child("hits").get_child("hits").end(); ++it) ++count;
+        }
+        if (count != total) throw base::HuskyException("Result corrupted, total is different from count.");
     }
-    if (count != total)
-        EXCEPTION("Result corrupted, total is different from count.");
-    return total;
+    return 0;    
 }
 
 void ElasticsearchInputFormat::read(boost::property_tree::ptree jresult, bool is_clear) {
