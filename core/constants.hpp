@@ -73,7 +73,6 @@ const uint32_t TYPE_KAFKA_END_REQ = 0xfa091344;
 const uint32_t TYPE_MONGODB_REQ = 0xfa091388;
 const uint32_t TYPE_MONGODB_END_REQ = 0xfa091389;
 const uint32_t TYPE_LOCAL_BLK_REQ = 0xfa0e12a2;
-const uint32_t TYPE_ORC_BLK_REQ = 0xfa2e32a1;
 const uint32_t TYPE_STOP_ASYNC_REQ = 0xf89d74b4;
 const uint32_t TYPE_STOP_ASYNC_YES = 0x09b8ab2b;
 const uint32_t TYPE_STOP_ASYNC_NO = 0x192a241a;
@@ -88,5 +87,6 @@ const uint32_t TYPE_EXIT = 0x47d79fd5;
 const uint32_t TYPE_GET_HASH_RING = 0x48d693d5;
 const uint32_t TYPE_NFS_FILE_REQ = 0x4E465251;
 const uint32_t TYPE_HDFS_FILE_REQ = 0x48465251;
+const uint32_t TYPE_ELASTICSEARCH_REQ = 0xfa081098;
 
 }  // namespace husky
