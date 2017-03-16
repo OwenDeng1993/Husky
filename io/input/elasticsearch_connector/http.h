@@ -59,8 +59,9 @@ enum Result { OK, ERROR, MORE_DATA };
 
 class HTTP {
    public:
-    HTTP(std::string url, bool keepAlive);
+    HTTP();
     ~HTTP();
+	void reset_url(std::string uri, bool keepAlive = false);
 
     /// DEPRECATED
     /// Generic request that parses the result in Json::Object.

@@ -59,6 +59,7 @@ class ElasticsearchInputFormat final : public InputFormatBase {
     std::string router_;
     std::vector<RecordT> records_vector_;
     std::string records_shards_[100];
+    HTTP http_conn_;
 };
 
 }  // namespace io

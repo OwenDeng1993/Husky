@@ -28,10 +28,12 @@ namespace io {
 class ElasticsearchOutputFormat final : public OutputFormatBase {
    public:
     typedef std::string RecordT;
-    ElasticsearchOutputFormat(std::string port = "9200");
+    ElasticsearchOutputFormat();
     virtual ~ElasticsearchOutputFormat();
     virtual bool is_setup() const;
-    bool isActive();
+    bool is_active();
+	
+	bool set_server(const std::string& server, const bool& local_prefer = true);
 
     bool set_index(const std::string& index, const std::string& type, const std::string& id,
                    const boost::property_tree::ptree& content);
@@ -48,9 +50,11 @@ class ElasticsearchOutputFormat final : public OutputFormatBase {
     void bulk_setbound(const int bound) { bound_ = bound;}
 
    protected:
+    bool is_local_prefer_;
     boost::property_tree::ptree result;
     std::string node_;
     std::string node_id;
+	std::string server_;
     std::string index_;
     std::string type_;
     std::string id_;
@@ -61,7 +65,6 @@ class ElasticsearchOutputFormat final : public OutputFormatBase {
     std::string router_;
     std::vector<std::string> records_vector_;
     std::stringstream data;
-    /// HTTP Connexion module.
     HTTP http_conn_;
 };
 

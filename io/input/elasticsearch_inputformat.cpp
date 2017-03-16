@@ -32,8 +32,15 @@
 namespace husky {
 namespace io {
 
+enum ElasticsearchInputFormatSetUp{
+    NotSetUp = 0,
+    ServerSetUp = 1 << 1,
+    AllSetUp = ServerSetUp,
+};
+
 ElasticsearchInputFormat::ElasticsearchInputFormat() {
     records_vector_.clear();
+    is_setup_ = ElasticsearchInputFormatSetUp::NotSetUp;
 }
 
 bool ElasticsearchInputFormat::set_server(const std::string& server, const bool& local_prefer) {
@@ -41,33 +48,34 @@ bool ElasticsearchInputFormat::set_server(const std::string& server, const bool&
     server_ = server;
     if (is_local_prefer_) {
         server_ = husky::Context::get_worker_info().get_hostname(husky::Context::get_worker_info().get_process_id()) +
-                  ":" + "9200";
+                  ":" + "9200"; 
         if (!is_active())
-            throw base::HuskyException("Cannot create local engine, database is not active and try the remote engine");
+            throw base::HuskyException("Cannot create local engine, database is not active and try the remote engine"); 
+        is_setup_ = ElasticsearchInputFormatSetUp::AllSetUp;
     } else {
         server_ = server;
         if (!is_active())
             throw base::HuskyException("Cannot connect to server");
+        is_setup_ = ElasticsearchInputFormatSetUp::AllSetUp;
     }
     // geting the local node_id from the elasticsearch
     std::ostringstream oss;
     oss << "_nodes/_local";
     boost::property_tree::ptree msg;
-    HTTP http_conn_(server_, false);
+   // http_conn_.reset_server(server_, false);
     http_conn_.get(oss.str().c_str(), 0, &msg);
     node_id = msg.get_child("main").get_child("nodes").begin()->first;
-    is_setup_ = 1;
 
     return true;
 }
 
 ElasticsearchInputFormat::~ElasticsearchInputFormat() { records_vector_.clear(); }
 
-bool ElasticsearchInputFormat::is_setup() const { return (is_setup_); }
+bool ElasticsearchInputFormat::is_setup() const { return !(is_setup_^ElasticsearchInputFormatSetUp::AllSetUp); }
 
 bool ElasticsearchInputFormat::is_active() {
     boost::property_tree::ptree root;
-    HTTP http_conn_(server_, false);
+   // http_conn_.reset_server(server_, false);
     try {
         http_conn_.get(0, 0, &root);
     } catch (Exception& e) {
@@ -93,7 +101,7 @@ bool ElasticsearchInputFormat::is_active() {
 }
 
 int ElasticsearchInputFormat::find_shard() {
-    HTTP http_conn_(server_, false);
+    //http_conn_.reset_server(server_, false);
     std::stringstream url;
     url << index_ << "/_search_shards?";
     boost::property_tree::ptree obj;
@@ -119,7 +127,7 @@ void ElasticsearchInputFormat::set_query(const std::string& index, const std::st
     index_ = index;
     type_ = type;
     query_ = query;
-    HTTP http_conn_(server_, true);
+    //HTTP http_conn_(server_, true);
     records_vector_.clear();
     while (true) {
         std::stringstream url;
@@ -144,7 +152,7 @@ void ElasticsearchInputFormat::set_query(const std::string& index, const std::st
 }
 
 bool ElasticsearchInputFormat::get_document(const std::string& index, const std::string& type, const std::string& id) {
-    HTTP http_conn_(server_, false);
+    //HTTP http_conn_(server_, false);
     index_ = index;
     type_ = type;
     id_ = id;
@@ -161,7 +169,7 @@ bool ElasticsearchInputFormat::get_document(const std::string& index, const std:
 
 int ElasticsearchInputFormat::scan_fully(const std::string& index, const std::string& type, const std::string& query,
                                          int scrollSize) {
-    HTTP http_conn_(server_, true);
+    //HTTP http_conn_(server_, true);
     index_ = index;
     type_ = type;
     query_ = query;
