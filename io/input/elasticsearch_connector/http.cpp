@@ -55,17 +55,15 @@ int to_int(const std::string& str) {
     return numb;
 }
 
-HTTP::HTTP()
-    : _connection(0), _sockfd(-1), _keepAlive(true), _keepAliveTimeout(60), _lastRequest(0) {
-}
+HTTP::HTTP() : _connection(0), _sockfd(-1), _keepAlive(false), _keepAliveTimeout(60), _lastRequest(0) {}
 
 HTTP::~HTTP() {
     // Set the socket free.
     disconnect();
 }
 
-void HTTP::reset_url(std::string uri, bool keepAlive)
-{
+void HTTP::set_url(std::string uri, bool keepAlive) {
+    _keepAlive = keepAlive;
     // Remove http protocol if set.
     size_t pos = uri.find("http://");
     if (pos != std::string::npos)
@@ -115,8 +113,8 @@ void HTTP::reset_url(std::string uri, bool keepAlive)
 
     _client.sin_family = AF_INET;
     _client.sin_port = htons(_port);
-    memcpy(&_client.sin_addr, host->h_addr, host->h_length);	
-}	
+    memcpy(&_client.sin_addr, host->h_addr, host->h_length);
+}
 
 // Returns true if managed to connect.
 bool HTTP::connect() {

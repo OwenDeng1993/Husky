@@ -57,7 +57,8 @@ ESShardAssigner::~ESShardAssigner() {
 void ESShardAssigner::create_shards() {
     shards_.clear();
     nodes_.clear();
-    HTTP http_conn_(server_, false);
+    HTTP http_conn_;
+    http_conn_.set_url(server_, false);
     std::stringstream url;
     url << index_ << "/_search_shards?";
     boost::property_tree::ptree obj;

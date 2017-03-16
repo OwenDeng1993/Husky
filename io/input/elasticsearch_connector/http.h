@@ -61,7 +61,7 @@ class HTTP {
    public:
     HTTP();
     ~HTTP();
-	void reset_url(std::string uri, bool keepAlive = false);
+    void set_url(std::string uri, bool keepAlive = false);
 
     /// DEPRECATED
     /// Generic request that parses the result in Json::Object.
@@ -164,4 +164,3 @@ class HTTP {
     /// Mutex for every request.
     std::mutex _requestMutex;
 };
-

@@ -32,8 +32,8 @@ class ElasticsearchOutputFormat final : public OutputFormatBase {
     virtual ~ElasticsearchOutputFormat();
     virtual bool is_setup() const;
     bool is_active();
-	
-	bool set_server(const std::string& server, const bool& local_prefer = true);
+
+    bool set_server(const std::string& server, const bool& local_prefer = true);
 
     bool set_index(const std::string& index, const std::string& type, const std::string& id,
                    const boost::property_tree::ptree& content);
@@ -47,14 +47,14 @@ class ElasticsearchOutputFormat final : public OutputFormatBase {
 
     void bulk_flush();
 
-    void bulk_setbound(const int bound) { bound_ = bound;}
+    void bulk_setbound(const int bound) { bound_ = bound; }
 
    protected:
     bool is_local_prefer_;
     boost::property_tree::ptree result;
     std::string node_;
     std::string node_id;
-	std::string server_;
+    std::string server_;
     std::string index_;
     std::string type_;
     std::string id_;

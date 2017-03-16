@@ -39,7 +39,7 @@ void mongo_to_es() {
     std::string type = husky::Context::get_param("elasticsearch_type");
 
     husky::io::ElasticsearchOutputFormat outfmt;
-    outfmt.set_server(server);
+    outfmt.set_server(server, true);
     outfmt.bulk_setbound(1000);
     auto work = [&](std::string& chunk) {
         mongo::BSONObj o = mongo::fromjson(chunk);

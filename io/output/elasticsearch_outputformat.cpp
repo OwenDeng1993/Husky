@@ -27,17 +27,16 @@
 namespace husky {
 namespace io {
 
-enum ElasticsearchOutputFormatSetUp{
+enum ElasticsearchOutputFormatSetUp {
     NotSetUp = 0,
     ServerSetUp = 1 << 1,
     AllSetUp = ServerSetUp,
 };
 
-ElasticsearchOutputFormat::ElasticsearchOutputFormat()
-{
-	records_vector_.clear();
-	is_setup_ = ElasticsearchOutputFormatSetUp::NotSetUp;
-	bound_ = 1024;
+ElasticsearchOutputFormat::ElasticsearchOutputFormat() {
+    records_vector_.clear();
+    is_setup_ = ElasticsearchOutputFormatSetUp::NotSetUp;
+    bound_ = 1024;
 }
 
 bool ElasticsearchOutputFormat::set_server(const std::string& server, const bool& local_prefer) {
@@ -45,14 +44,14 @@ bool ElasticsearchOutputFormat::set_server(const std::string& server, const bool
     server_ = server;
     if (is_local_prefer_) {
         server_ = husky::Context::get_worker_info().get_hostname(husky::Context::get_worker_info().get_process_id()) +
-                  ":" + "9200"; 
-		http_conn_.reset_url(server_,true);		  
+                  ":" + "9200";
+        http_conn_.set_url(server_, true);
         if (!is_active())
-            throw base::HuskyException("Cannot create local engine, database is not active and try the remote engine"); 
+            throw base::HuskyException("Cannot create local engine, database is not active and try the remote engine");
         is_setup_ = ElasticsearchOutputFormatSetUp::AllSetUp;
     } else {
         server_ = server;
-		http_conn_.reset_url(server_,true);	
+        http_conn_.set_url(server_, true);
         if (!is_active())
             throw base::HuskyException("Cannot connect to server");
         is_setup_ = ElasticsearchOutputFormatSetUp::AllSetUp;
@@ -61,7 +60,6 @@ bool ElasticsearchOutputFormat::set_server(const std::string& server, const bool
     std::ostringstream oss;
     oss << "_nodes/_local";
     boost::property_tree::ptree msg;
- //   HTTP http_conn_(server_, false);
     http_conn_.get(oss.str().c_str(), 0, &msg);
     node_id = msg.get_child("main").get_child("nodes").begin()->first;
 
@@ -70,11 +68,10 @@ bool ElasticsearchOutputFormat::set_server(const std::string& server, const bool
 
 ElasticsearchOutputFormat::~ElasticsearchOutputFormat() {}
 
-bool ElasticsearchOutputFormat::is_setup() const { return !(is_setup_^ElasticsearchOutputFormatSetUp::AllSetUp); }
+bool ElasticsearchOutputFormat::is_setup() const { return !(is_setup_ ^ ElasticsearchOutputFormatSetUp::AllSetUp); }
 
 bool ElasticsearchOutputFormat::is_active() {
     boost::property_tree::ptree root;
-    //HTTP http_conn_(server_, false);
     try {
         http_conn_.get(0, 0, &root);
     } catch (Exception& e) {
@@ -108,7 +105,6 @@ bool ElasticsearchOutputFormat::set_index(const std::string& index, const std::s
     write_json(data, content);
     boost::property_tree::ptree result;
     url << index_ << "/" << type_ << "/";
-	//HTTP http_conn_(server_, false);
     http_conn_.post(url.str().c_str(), data.str().c_str(), &result);
     return true;
 }
@@ -123,7 +119,6 @@ bool ElasticsearchOutputFormat::set_index(const std::string& index, const std::s
     write_json(data, content);
     boost::property_tree::ptree result;
     url << index_ << "/" << type_ << "/" << id_;
-	//HTTP http_conn_(server_, false);
     http_conn_.put(url.str().c_str(), data.str().c_str(), &result);
     return true;
 }
@@ -153,7 +148,6 @@ void ElasticsearchOutputFormat::bulk_flush() {
     if (records_vector_.empty())
         return;
     records_vector_.clear();
-	//HTTP http_conn_(server_, false);
     http_conn_.post("/_bulk", data.str().c_str(), &result);
     data.clear();
     data.str("");
