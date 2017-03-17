@@ -50,8 +50,15 @@ bool ElasticsearchInputFormat::set_server(const std::string& server, const bool&
         server_ = husky::Context::get_worker_info().get_hostname(husky::Context::get_worker_info().get_process_id()) +
                   ":" + "9200";
         http_conn_.set_url(server_, true);
-        if (!is_active())
-            throw base::HuskyException("Cannot create local engine, database is not active and try the remote engine");
+        if (!is_active()) {
+            server_ = server;
+            http_conn_.set_url(server_, true);
+            husky::LOG_I << "local engine fail, reconnect with remote engine";
+            if (!is_active())
+                throw base::HuskyException(
+                    "Cannot create local engine, database is not active and try the remote engine");
+            husky::LOG_I << "reconnect successfully";
+        }
         is_setup_ = ElasticsearchInputFormatSetUp::AllSetUp;
     } else {
         server_ = server;
@@ -79,13 +86,14 @@ bool ElasticsearchInputFormat::is_active() {
     try {
         http_conn_.get(0, 0, &root);
     } catch (Exception& e) {
-        printf("get(0) failed in ElasticSearch::isActive(). Exception caught: %s\n", e.what());
+        husky::LOG_I << "get(0) failed in ElasticsearchInputformat::is_active(). Exception caught: %s\n" << e.what();
         return false;
     } catch (std::exception& e) {
-        printf("get(0) failed in ElasticSearch::isActive(). std::exception caught: %s\n", e.what());
+        husky::LOG_I << "get(0) failed in ElasticsearchInputFormat::is_active(). std::exception caught: %s\n"
+                     << e.what();
         return false;
     } catch (...) {
-        printf("get(0) failed in ElasticSearch::isActive().\n");
+        husky::LOG_I << "get(0) failed in ElasticsearchInputFormat::is_active().\n";
         return false;
     }
 
@@ -93,7 +101,7 @@ bool ElasticsearchInputFormat::is_active() {
         return false;
 
     if (root.get<int>("status") != 200) {
-        printf("Status is not 200. Cannot find Elasticsearch Node.\n");
+        husky::LOG_I << "Status is not 200. Cannot find Elasticsearch Node.\n";
         return false;
     }
 
