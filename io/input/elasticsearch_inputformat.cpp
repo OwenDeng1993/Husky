@@ -46,6 +46,12 @@ ElasticsearchInputFormat::ElasticsearchInputFormat() {
 bool ElasticsearchInputFormat::set_server(const std::string& server, const bool& local_prefer) {
     is_local_prefer_ = local_prefer;
     server_ = server;
+  /*  if (husky::Context::get_global_tid() == 0) {
+        BinStream question;
+        std::string reset_server = "reset server"; 
+        question << reset_server << reset_server << reset_server;
+        husky::Context::get_coordinator()->ask_master(question, husky::TYPE_ELASTICSEARCH_REQ);
+    }*/
     if (is_local_prefer_) {
         server_ = husky::Context::get_worker_info().get_hostname(husky::Context::get_worker_info().get_process_id()) +
                   ":" + "9200";
