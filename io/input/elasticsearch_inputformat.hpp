@@ -34,7 +34,8 @@ class ElasticsearchInputFormat final : public InputFormatBase {
     bool is_active();
     int find_shard();
 
-    bool set_server(const std::string& server, const bool& local_prefer = true);
+    bool set_server(const std::string& server, bool local_prefer = true,
+                    bool local_only = false);
 
     void set_query(const std::string& index, const std::string& type, const std::string& query);
 
@@ -48,6 +49,7 @@ class ElasticsearchInputFormat final : public InputFormatBase {
 
    protected:
     bool is_local_prefer_;
+    bool is_local_only_;
     boost::property_tree::ptree result;
     std::string node_;
     std::string node_id;

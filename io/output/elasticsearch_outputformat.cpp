@@ -42,9 +42,10 @@ ElasticsearchOutputFormat::ElasticsearchOutputFormat() {
 bool ElasticsearchOutputFormat::set_server(const std::string& server, const bool& local_prefer) {
     is_local_prefer_ = local_prefer;
     server_ = server;
+    std::string port = server_.substr(server_.find(":") + 1);
     if (is_local_prefer_) {
         server_ = husky::Context::get_worker_info().get_hostname(husky::Context::get_worker_info().get_process_id()) +
-                  ":" + "9200";
+                  ":" + port;
         http_conn_.set_url(server_, true);
         if (!is_active()) {
             server_ = server;
@@ -87,7 +88,7 @@ bool ElasticsearchOutputFormat::is_active() {
         husky::LOG_I << "get(0) failed in ElasticSearch::isActive(). std::exception caught: %s\n" << e.what();
         return false;
     } catch (...) {
-        husky::LOG_I <<"get(0) failed in ElasticSearch::isActive().\n";
+        husky::LOG_I << "get(0) failed in ElasticSearch::isActive().\n";
         return false;
     }
 

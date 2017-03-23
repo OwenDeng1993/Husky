@@ -43,35 +43,43 @@ ElasticsearchInputFormat::ElasticsearchInputFormat() {
     is_setup_ = ElasticsearchInputFormatSetUp::NotSetUp;
 }
 
-bool ElasticsearchInputFormat::set_server(const std::string& server, const bool& local_prefer) {
+bool ElasticsearchInputFormat::set_server(const std::string& server, bool local_prefer, bool local_only) {
     is_local_prefer_ = local_prefer;
     server_ = server;
-  /*  if (husky::Context::get_global_tid() == 0) {
-        BinStream question;
-        std::string reset_server = "reset server"; 
-        question << reset_server << reset_server << reset_server;
-        husky::Context::get_coordinator()->ask_master(question, husky::TYPE_ELASTICSEARCH_REQ);
-    }*/
-    if (is_local_prefer_) {
+    std::size_t found = server_.find(":");
+    std::string port = server.substr(found + 1);
+    is_local_only_ = local_only;
+    if (local_only) {
         server_ = husky::Context::get_worker_info().get_hostname(husky::Context::get_worker_info().get_process_id()) +
-                  ":" + "9200";
-        http_conn_.set_url(server_, true);
-        if (!is_active()) {
-            server_ = server;
-            http_conn_.set_url(server_, true);
-            husky::LOG_I << "local engine fail, reconnect with remote engine";
-            if (!is_active())
-                throw base::HuskyException(
-                    "Cannot create local engine, database is not active and try the remote engine");
-            husky::LOG_I << "reconnect successfully";
-        }
-        is_setup_ = ElasticsearchInputFormatSetUp::AllSetUp;
-    } else {
-        server_ = server;
+                  ":" + port;
         http_conn_.set_url(server_, true);
         if (!is_active())
-            throw base::HuskyException("Cannot connect to server");
+            throw base::HuskyException("local only mode failed, please set local_only = false");
         is_setup_ = ElasticsearchInputFormatSetUp::AllSetUp;
+    } else {
+        if (is_local_prefer_) {
+            server_ =
+                husky::Context::get_worker_info().get_hostname(husky::Context::get_worker_info().get_process_id()) +
+                ":" + port;
+            http_conn_.set_url(server_, true);
+            if (!is_active()) {
+                is_local_prefer_ = false;
+                server_ = server;
+                http_conn_.set_url(server_, true);
+                husky::LOG_I << "local engine fail, reconnect with remote engine";
+                if (!is_active())
+                    throw base::HuskyException(
+                        "Cannot create local engine, database is not active and try the remote engine");
+                husky::LOG_I << "reconnect successfully";
+            }
+            is_setup_ = ElasticsearchInputFormatSetUp::AllSetUp;
+        } else {
+            server_ = server;
+            http_conn_.set_url(server_, true);
+            if (!is_active())
+                throw base::HuskyException("Cannot connect to server");
+            is_setup_ = ElasticsearchInputFormatSetUp::AllSetUp;
+        }
     }
     // geting the local node_id from the elasticsearch
     std::ostringstream oss;
@@ -142,14 +150,27 @@ void ElasticsearchInputFormat::set_query(const std::string& index, const std::st
     query_ = query;
     records_vector_.clear();
     while (true) {
-        std::stringstream url;
-        BinStream question;
-        question << server_ << index_ << node_id;
-        BinStream answer = husky::Context::get_coordinator()->ask_master(question, husky::TYPE_ELASTICSEARCH_REQ);
         std::string shard_;
-        answer >> shard_;
+        if (is_local_only_) {
+            int shard_num = find_shard();
+            int worker_num = husky::Context::get_num_local_workers();
+            int id = husky::Context::get_local_tid();
+            if (id >= shard_num)
+                return;
+            shard_ = records_shards_[id];
+            while (id + worker_num < shard_num) {
+                id = id + worker_num;
+                shard_ = shard_ + "," + records_shards_[id];
+            }
+        } else {
+            BinStream question;
+            question << server_ << index_ << node_id;
+            BinStream answer = husky::Context::get_coordinator()->ask_master(question, husky::TYPE_ELASTICSEARCH_REQ);
+            answer >> shard_;
+        }
         if (shard_ == "No shard")
             return;
+        std::stringstream url;
         url << index_ << "/" << type_ << "/_search?preference=_shards:" << shard_;
         http_conn_.post(url.str().c_str(), query_.c_str(), &result);
         if (result.get_child("main").empty()) {
@@ -160,6 +181,7 @@ void ElasticsearchInputFormat::set_query(const std::string& index, const std::st
             throw base::HuskyException("Search timed out.");
         }
         ElasticsearchInputFormat::read(result, false);
+        if (is_local_only_) break;
     }
 }
 
@@ -186,14 +208,27 @@ int ElasticsearchInputFormat::scan_fully(const std::string& index, const std::st
     records_vector_.clear();
     bool is_first = true;
     while (true) {
-        BinStream question;
-        question << server_ << index_ << node_id;
-        BinStream answer = husky::Context::get_coordinator()->ask_master(question, husky::TYPE_ELASTICSEARCH_REQ);
         std::string shard_;
-        answer >> shard_;
+
+        if (is_local_only_) {
+            int shard_num = find_shard();
+            int worker_num = husky::Context::get_num_local_workers();
+            int id = husky::Context::get_local_tid();
+            if (id >= shard_num)
+                return 0;
+            shard_ = records_shards_[id];
+            while (id + worker_num < shard_num) {
+                id = id + worker_num;
+                shard_ = shard_ + "," + records_shards_[id];
+            }
+        } else {
+            BinStream question;
+            question << server_ << index_ << node_id;
+            BinStream answer = husky::Context::get_coordinator()->ask_master(question, husky::TYPE_ELASTICSEARCH_REQ);
+            answer >> shard_;
+        }
         if (shard_ == "No shard")
             break;
-
         std::stringstream scrollUrl;
         scrollUrl << index << "/" << type << "/_search?preference=_shards:" << shard_
                   << "&search_type=scan&scroll=10m&size=" << scrollSize;
@@ -217,6 +252,8 @@ int ElasticsearchInputFormat::scan_fully(const std::string& index, const std::st
         }
         if (count != total)
             throw base::HuskyException("Result corrupted, total is different from count.");
+        if (is_local_only_)
+            break;
     }
     return 0;
 }
